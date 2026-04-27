@@ -16,6 +16,24 @@ ENV_PROVIDER_NAME = "DEDICATA_KEYCLOAK_PROVIDER_NAME"
 ENV_LOGIN_LABEL = "DEDICATA_KEYCLOAK_LOGIN_LABEL"
 ENV_SCOPE = "DEDICATA_KEYCLOAK_SCOPE"
 ENV_TOKEN_MAP = "DEDICATA_KEYCLOAK_TOKEN_MAP"
+ENV_LOCK_PROVIDER_CONFIG = "DEDICATA_KEYCLOAK_LOCK_PROVIDER_CONFIG"
+
+SYNC_CONTEXT_KEY = "dedicata_keycloak_env_sync"
+MANAGED_PROVIDER_FIELDS = {
+    "name",
+    "flow",
+    "enabled",
+    "client_id",
+    "client_secret",
+    "scope",
+    "token_map",
+    "body",
+    "css_class",
+    "auth_endpoint",
+    "token_endpoint",
+    "jwks_uri",
+    "end_session_endpoint",
+}
 
 FALSE_VALUES = {"0", "false", "no", "off"}
 
@@ -28,6 +46,10 @@ def _get_bool(value, default):
     if value is None or value == "":
         return default
     return value.strip().lower() not in FALSE_VALUES
+
+
+def is_provider_config_locked():
+    return _get_bool(os.getenv(ENV_LOCK_PROVIDER_CONFIG), True)
 
 
 def _provider_values(env):
@@ -101,9 +123,9 @@ def sync_keycloak_provider(env):
         provider = provider_model.search([("name", "=", values["name"])], limit=1)
 
     if provider:
-        provider.write(values)
+        provider.with_context(**{SYNC_CONTEXT_KEY: True}).write(values)
     else:
-        provider = provider_model.create(values)
+        provider = provider_model.with_context(**{SYNC_CONTEXT_KEY: True}).create(values)
     _ensure_xmlid(env, provider)
 
     if values["enabled"]:

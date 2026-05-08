@@ -91,7 +91,7 @@ class DedicataRunIdentity(models.Model):
         login = (payload.get("login") or email).strip()
         missing = [
             field
-            for field, value in (("sub", sub), ("email", email), ("name", name))
+            for field, value in (("email", email), ("name", name))
             if not value
         ]
         if missing:
@@ -107,20 +107,24 @@ class DedicataRunIdentity(models.Model):
         for optional_field in ("lang", "tz"):
             if payload.get(optional_field):
                 values[optional_field] = payload[optional_field]
+        local_login = payload.get("local_login_allowed")
+        if local_login is not None:
+            values["dedicata_run_local_login_allowed"] = payload_bool(local_login, False)
         return values
 
     @api.model
     def _find_user(self, provider, values):
         Users = self.env["res.users"].sudo().with_context(active_test=False)
-        user = Users.search(
-            [
-                ("oauth_provider_id", "=", provider.id),
-                ("oauth_uid", "=", values["oauth_uid"]),
-            ],
-            limit=1,
-        )
-        if user:
-            return user
+        if values.get("oauth_uid"):
+            user = Users.search(
+                [
+                    ("oauth_provider_id", "=", provider.id),
+                    ("oauth_uid", "=", values["oauth_uid"]),
+                ],
+                limit=1,
+            )
+            if user:
+                return user
 
         user = Users.search([("login", "=", values["login"])], limit=1)
         if user:
@@ -160,10 +164,13 @@ class DedicataRunIdentity(models.Model):
 
         if user.oauth_provider_id and user.oauth_provider_id != provider:
             raise UserError("Existing user is already linked to another OAuth provider.")
-        if user.oauth_uid and user.oauth_uid != values["oauth_uid"]:
+        if user.oauth_uid and values["oauth_uid"] and user.oauth_uid != values["oauth_uid"]:
             raise UserError("Existing user is already linked to another OAuth subject.")
 
-        user.with_context(**{RUN_SYNC_CONTEXT_KEY: True}).write(values)
+        write_values = dict(values)
+        if not write_values.get("oauth_uid") and user.oauth_uid:
+            write_values.pop("oauth_uid", None)
+        user.with_context(**{RUN_SYNC_CONTEXT_KEY: True}).write(write_values)
         return self._serialize_user(user, updated=True)
 
     @api.model
@@ -230,10 +237,22 @@ class DedicataRunIdentity(models.Model):
         provider = self.env.ref(PROVIDER_XMLID, raise_if_not_found=False)
         if not (provider and provider.sudo().enabled):
             return False
-        return (login or "").strip() not in get_csv_env(
-            ENV_LOCAL_LOGIN_ALLOWLIST,
-            "admin",
+        login = (login or "").strip()
+        # 1. Explicit ENV allowlist – escape hatch for ops (defaults to empty).
+        if login in get_csv_env(ENV_LOCAL_LOGIN_ALLOWLIST, ""):
+            return False
+        # 2. Per-user flag: the instance master (base.user_admin) has this flag
+        #    set by the post_init_hook.  The Run platform can also grant/revoke
+        #    it programmatically via upsert_user().
+        user = (
+            self.env["res.users"]
+            .sudo()
+            .with_context(active_test=False)
+            .search([("login", "=", login)], limit=1)
         )
+        if user and user.dedicata_run_local_login_allowed:
+            return False
+        return True
 
     @api.model
     def is_user_identity_locked(self):

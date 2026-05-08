@@ -81,18 +81,20 @@ provider.
 
 Required payload fields:
 
-* ``sub``: Keycloak subject. Stored as Odoo ``oauth_uid``.
 * ``email``: user email.
 * ``name``: user display name.
 
 Optional payload fields:
 
+* ``sub`` (alias ``oauth_uid``): Keycloak subject. Stored as Odoo ``oauth_uid``.
+  May be omitted when the Keycloak subject is not yet known (e.g. invitation
+  flow — see below).
 * ``login``: Odoo login. Defaults to ``email``.
 * ``active``: defaults to ``true``.
 * ``lang``: Odoo language code.
 * ``tz``: Odoo timezone.
 
-Minimal payload:
+Minimal payload (full — user already has a Keycloak account):
 
 .. code-block:: json
 
@@ -100,6 +102,15 @@ Minimal payload:
       "sub": "11111111-1111-1111-1111-111111111111",
       "email": "run.user@example.com",
       "name": "Run User"
+    }
+
+Minimal payload (invite — Keycloak subject not yet known):
+
+.. code-block:: json
+
+    {
+      "email": "invited@example.com",
+      "name": "Invited User"
     }
 
 Return example:
@@ -119,6 +130,19 @@ On create, the user receives the groups from
 ``DEDICATA_RUN_IDENTITY_DEFAULT_GROUP_XMLIDS``. The default is
 ``base.group_user``. On update, groups and companies are not overwritten, so
 manual permission changes made by an Odoo administrator are preserved.
+
+Invitation flow
+^^^^^^^^^^^^^^^
+
+When a user is provisioned before they have authenticated with Keycloak (for
+example through an invitation), ``sub`` may be omitted:
+
+1. Call ``upsert_user`` with only ``email`` and ``name``. The user is created
+   without an ``oauth_uid``.
+2. When the user later authenticates via Keycloak, call ``upsert_user`` again
+   with ``sub``, ``email``, and ``name``. The existing user is found by email
+   or login, and ``oauth_uid`` is set on that record.
+3. Subsequent calls find the user directly by ``oauth_uid``.
 
 ``deactivate_user(payload)``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,12 +175,16 @@ Matching rules
 
 ``upsert_user`` searches in this order:
 
-* matching Keycloak provider plus ``oauth_uid``/``sub``;
-* matching Odoo ``login``;
-* matching Odoo ``email``.
+1. Matching Keycloak provider plus ``oauth_uid``/``sub`` — only when ``sub``
+   is present in the payload.
+2. Matching Odoo ``login``.
+3. Matching Odoo ``email``.
 
-If an existing user is already linked to another OAuth provider or another
-OAuth subject, the method raises an error instead of relinking it silently.
+If an existing user is already linked to a different OAuth provider, the method
+raises an error. If an existing user already has an ``oauth_uid`` and the
+payload provides a *different* ``sub``, the method also raises an error.
+Providing no ``sub`` (or an empty ``sub``) for a user that already has an
+``oauth_uid`` is safe — the existing value is preserved.
 
 Local Keycloak compose test
 ---------------------------

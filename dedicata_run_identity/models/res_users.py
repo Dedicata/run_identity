@@ -16,6 +16,16 @@ class ResUsers(models.Model):
         readonly=True,
     )
 
+    dedicata_run_local_login_allowed = fields.Boolean(
+        string="Dedicata Run: Local Login Allowed",
+        copy=False,
+        help=(
+            "When enabled, this user can always authenticate with a local "
+            "password even when SSO enforcement is active. Grant this flag "
+            "to the instance master user so it is never locked out."
+        ),
+    )
+
     def _auth_oauth_signin(self, provider, validation, params):
         identity = self.env["dedicata.run.identity"].sudo()
         if identity.should_block_oauth_auto_create(provider):

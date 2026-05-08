@@ -13,4 +13,5 @@
     ],
     "installable": True,
     "auto_install": [],
+    "post_init_hook": "post_init_hook",
 }

@@ -1,0 +1,27 @@
+# Do NOT update manually; changes here will be overwritten by Copier
+_commit: 1bb1d07
+_src_path: https://github.com/itbrasil-odoo/itbrasil-addons-repo-template.git
+additional_ruff_rules: []
+banner_url: https://github.com/itbrasil-odoo/.github/raw/main/readme-banner-image.png
+ci: GitHub
+enable_checklog_odoo: true
+generate_requirements_txt: true
+github_check_license: true
+github_ci_extra_env: {}
+github_enable_codecov: false
+github_enable_makepot: false
+github_enable_stale_action: true
+github_enforce_dev_status_compatibility: true
+include_wkhtmltopdf: false
+odoo_test_flavor: Both
+odoo_version: 19.0
+org_name: Dedicata
+org_slug: dedicata
+rebel_module_groups: []
+repo_description: Addons para o Run
+repo_name: Addons para o Run da Wevy
+repo_slug: run_identity
+repo_website: https://github.com/dedicata/run_identity
+use_pyproject_toml: true
+use_ruff: true
+

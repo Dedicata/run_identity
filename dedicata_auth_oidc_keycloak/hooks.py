@@ -130,6 +130,12 @@ def sync_keycloak_provider(env):
     if provider:
         provider.with_context(**{SYNC_CONTEXT_KEY: True}).write(values)
     else:
+        if not _clean_url(os.getenv(ENV_ISSUER_URL)):
+            _logger.info(
+                "Keycloak OIDC provider not created: %s is not configured.",
+                ENV_ISSUER_URL,
+            )
+            return
         provider = provider_model.with_context(**{SYNC_CONTEXT_KEY: True}).create(
             values
         )

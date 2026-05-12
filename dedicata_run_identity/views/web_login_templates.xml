@@ -6,19 +6,14 @@
         name="Dedicata Run Hide Password Login"
     >
         <!--
-        Odoo 19 hides the form by default via t-attf-class="oe_login_form #{...
-        d-none}". Override it to keep the form (and the SSO buttons inside it)
-        visible when SSO is active.
+        Odoo 17 always shows the form (plain class, no d-none logic).
+        Hide individual fields when SSO is active so the SSO buttons
+        inside .o_login_auth remain visible.
         -->
-        <xpath expr="//form[@method='post']" position="attributes">
-            <attribute
-                name="t-attf-class"
-            >oe_login_form #{'' if (login or request.params.get('dedicata_local') or request.env['dedicata.run.identity'].sudo().should_hide_password_form()) else 'd-none'}</attribute>
-        </xpath>
 
         <!-- Hide email field when SSO is active (keep SSO buttons visible) -->
         <xpath
-            expr="//form[@method='post']//*[contains(@class,'field-login')]"
+            expr="//form[@method='post']//*[hasclass('field-login')]"
             position="attributes"
         >
             <attribute
@@ -26,9 +21,10 @@
             >not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
         </xpath>
 
-        <!-- Hide password field when SSO is active -->
+        <!-- Hide password wrapper when SSO is active.
+             v17 has no o_caps_lock_warning class; target the parent of the input. -->
         <xpath
-            expr="//form[@method='post']//*[contains(@class,'o_caps_lock_warning')]"
+            expr="//form[@method='post']//input[@id='password']/.."
             position="attributes"
         >
             <attribute
@@ -46,9 +42,11 @@
             >not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
         </xpath>
 
-        <!-- Add "Login with email and password" fallback link for portal users -->
+        <!-- Add "Login with email and password" fallback link for portal users.
+             v17 uses t-attf-class on oe_login_buttons; target via the main submit
+             button's parent to avoid matching issues with the attribute selector. -->
         <xpath
-            expr="//form[@method='post']//div[contains(@class,'oe_login_buttons')]"
+            expr="//form[@method='post']//button[@type='submit' and not(@name)]/.."
             position="inside"
         >
             <t

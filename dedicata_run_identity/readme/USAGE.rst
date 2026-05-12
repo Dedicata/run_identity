@@ -1,21 +1,139 @@
 Usage
 =====
 
-Dedicata Run should provision users through Odoo's native external RPC API.
-The module does not expose a custom HTTP controller. It exposes model methods
-on ``dedicata.run.identity`` and those methods are called through the standard
-Odoo RPC endpoints.
+Dedicata Run provisions users through the ``/run-api`` REST controller exposed
+by this module. The controller identifies users by their Keycloak **username**
+(stored as the Odoo ``login`` field).
 
-Authentication
---------------
+REST API (``/run-api``)
+-----------------------
 
-Use a technical Odoo user that belongs to ``Settings / Administration``.
-Authenticate with either the user's password or, preferably, an Odoo API key.
+All requests require the header::
 
-The API key is passed in the same RPC field normally named ``password``.
+    Authorization: Bearer <DEDICATA_RUN_API_SECRET>
 
-JSON-RPC endpoints
-------------------
+If the secret is wrong or missing the endpoint returns ``401``. If
+``DEDICATA_RUN_API_SECRET`` is not set at all the endpoint returns ``503``.
+
+Create or update a user
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    curl -X POST http://localhost:18069/run-api/users \
+      -H "Authorization: Bearer <secret>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "username": "joao.silva",
+        "email": "joao.silva@example.com",
+        "name": "João Silva"
+      }'
+
+Request body fields:
+
+* ``username`` (**required**): Keycloak username — stored as Odoo ``login``.
+* ``email`` (**required**): user e-mail address.
+* ``name`` (**required**): display name.
+* ``active``: defaults to ``true``.
+* ``lang``: Odoo language code (e.g. ``pt_BR``).
+* ``tz``: Odoo timezone (e.g. ``America/Sao_Paulo``).
+* ``local_login_allowed``: grant password-login bypass for SSO enforcement.
+
+Response on **create** (HTTP ``201``):
+
+.. code-block:: json
+
+    {
+      "user_id": 5,
+      "login": "joao.silva",
+      "email": "joao.silva@example.com",
+      "oauth_uid": null,
+      "created": true,
+      "updated": false
+    }
+
+Response on **update** (HTTP ``200``):
+
+.. code-block:: json
+
+    {
+      "user_id": 5,
+      "login": "joao.silva",
+      "email": "joao.silva@example.com",
+      "oauth_uid": null,
+      "created": false,
+      "updated": true
+    }
+
+The ``oauth_uid`` field will be populated automatically the first time the
+user authenticates via Keycloak SSO.
+
+Archive a user
+~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    curl -X DELETE http://localhost:18069/run-api/users/joao.silva \
+      -H "Authorization: Bearer <secret>"
+
+The user is **archived** (``active = false``), not deleted. Response (HTTP
+``200``):
+
+.. code-block:: json
+
+    {
+      "user_id": 5,
+      "login": "joao.silva",
+      "email": "joao.silva@example.com",
+      "archived": true
+    }
+
+If the username is not found the endpoint returns ``404``.
+
+Error responses
+~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+
+   * - Status
+     - Body
+     - Cause
+   * - ``400``
+     - ``{"error": "<message>"}``
+     - Missing required field or invalid payload.
+   * - ``401``
+     - ``{"error": "unauthorized"}``
+     - Bearer token missing or incorrect.
+   * - ``404``
+     - ``{"error": "user not found"}``
+     - Username not found (DELETE only).
+   * - ``503``
+     - ``{"error": "api not configured"}``
+     - ``DEDICATA_RUN_API_SECRET`` is not set.
+
+Matching rules (upsert)
+-----------------------
+
+When processing a ``POST`` the module searches for an existing user in this
+order:
+
+1. Matching Odoo ``login`` (Keycloak username).
+2. Matching Odoo ``email``.
+
+If an existing user is already linked to a different OAuth provider an error
+is raised.
+
+On create, the user receives the groups from
+``DEDICATA_RUN_IDENTITY_DEFAULT_GROUP_XMLIDS`` (default: ``base.group_user``).
+On update, groups and companies are not overwritten, so manual permission
+changes made by an Odoo administrator are preserved.
+
+JSON-RPC (legacy)
+-----------------
+
+The model methods ``upsert_user``, ``deactivate_user``, and ``get_user`` remain
+available through Odoo's standard JSON-RPC endpoint for backward compatibility.
 
 Authenticate and get the Odoo ``uid``:
 
@@ -29,17 +147,12 @@ Authenticate and get the Odoo ``uid``:
         "params": {
           "service": "common",
           "method": "authenticate",
-          "args": [
-            "my_odoo_db",
-            "admin",
-            "admin-or-api-key",
-            {}
-          ]
+          "args": ["my_odoo_db", "admin", "admin-or-api-key", {}]
         },
         "id": 1
       }'
 
-Call ``upsert_user``:
+Call ``upsert_user`` (note: JSON-RPC still accepts ``sub``):
 
 .. code-block:: bash
 
@@ -52,139 +165,13 @@ Call ``upsert_user``:
           "service": "object",
           "method": "execute_kw",
           "args": [
-            "my_odoo_db",
-            2,
-            "admin-or-api-key",
-            "dedicata.run.identity",
-            "upsert_user",
-            [{
-              "sub": "11111111-1111-1111-1111-111111111111",
-              "email": "run.user@example.com",
-              "name": "Run User"
-            }]
+            "my_odoo_db", 2, "admin-or-api-key",
+            "dedicata.run.identity", "upsert_user",
+            [{"email": "run.user@example.com", "name": "Run User"}]
           ]
         },
         "id": 2
       }'
-
-The second argument in ``args`` is the ``uid`` returned by
-``common.authenticate``.
-
-Available methods
------------------
-
-``upsert_user(payload)``
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Creates or updates one Odoo user and links it to the configured Keycloak
-provider.
-
-Required payload fields:
-
-* ``email``: user email.
-* ``name``: user display name.
-
-Optional payload fields:
-
-* ``sub`` (alias ``oauth_uid``): Keycloak subject. Stored as Odoo ``oauth_uid``.
-  May be omitted when the Keycloak subject is not yet known (e.g. invitation
-  flow — see below).
-* ``login``: Odoo login. Defaults to ``email``.
-* ``active``: defaults to ``true``.
-* ``lang``: Odoo language code.
-* ``tz``: Odoo timezone.
-
-Minimal payload (full — user already has a Keycloak account):
-
-.. code-block:: json
-
-    {
-      "sub": "11111111-1111-1111-1111-111111111111",
-      "email": "run.user@example.com",
-      "name": "Run User"
-    }
-
-Minimal payload (invite — Keycloak subject not yet known):
-
-.. code-block:: json
-
-    {
-      "email": "invited@example.com",
-      "name": "Invited User"
-    }
-
-Return example:
-
-.. code-block:: json
-
-    {
-      "user_id": 5,
-      "login": "run.user@example.com",
-      "email": "run.user@example.com",
-      "oauth_uid": "11111111-1111-1111-1111-111111111111",
-      "created": true,
-      "updated": false
-    }
-
-On create, the user receives the groups from
-``DEDICATA_RUN_IDENTITY_DEFAULT_GROUP_XMLIDS``. The default is
-``base.group_user``. On update, groups and companies are not overwritten, so
-manual permission changes made by an Odoo administrator are preserved.
-
-Invitation flow
-^^^^^^^^^^^^^^^
-
-When a user is provisioned before they have authenticated with Keycloak (for
-example through an invitation), ``sub`` may be omitted:
-
-1. Call ``upsert_user`` with only ``email`` and ``name``. The user is created
-   without an ``oauth_uid``.
-2. When the user later authenticates via Keycloak, call ``upsert_user`` again
-   with ``sub``, ``email``, and ``name``. The existing user is found by email
-   or login, and ``oauth_uid`` is set on that record.
-3. Subsequent calls find the user directly by ``oauth_uid``.
-
-``deactivate_user(payload)``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Deactivates the matching Odoo user.
-
-Payload:
-
-.. code-block:: json
-
-    {
-      "sub": "11111111-1111-1111-1111-111111111111"
-    }
-
-``get_user(payload)``
-~~~~~~~~~~~~~~~~~~~~~
-
-Returns the matching user data or ``false``.
-
-Payload:
-
-.. code-block:: json
-
-    {
-      "sub": "11111111-1111-1111-1111-111111111111"
-    }
-
-Matching rules
---------------
-
-``upsert_user`` searches in this order:
-
-1. Matching Keycloak provider plus ``oauth_uid``/``sub`` — only when ``sub``
-   is present in the payload.
-2. Matching Odoo ``login``.
-3. Matching Odoo ``email``.
-
-If an existing user is already linked to a different OAuth provider, the method
-raises an error. If an existing user already has an ``oauth_uid`` and the
-payload provides a *different* ``sub``, the method also raises an error.
-Providing no ``sub`` (or an empty ``sub``) for a user that already has an
-``oauth_uid`` is safe — the existing value is preserved.
 
 Local Keycloak compose test
 ---------------------------

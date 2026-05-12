@@ -88,7 +88,7 @@ class DedicataRunIdentity(models.Model):
         sub = (payload.get("sub") or payload.get("oauth_uid") or "").strip()
         email = (payload.get("email") or "").strip()
         name = (payload.get("name") or "").strip()
-        login = (payload.get("login") or email).strip()
+        login = (payload.get("login") or payload.get("username") or email).strip()
         missing = [
             field
             for field, value in (("email", email), ("name", name))
@@ -213,6 +213,20 @@ class DedicataRunIdentity(models.Model):
         if not user:
             return False
         return self._serialize_user(user)
+
+    @api.model
+    def archive_user_by_login(self, username):
+        Users = self.env["res.users"].sudo().with_context(active_test=False)
+        user = Users.search([("login", "=", username)], limit=1)
+        if not user:
+            return None
+        user.with_context(**{RUN_SYNC_CONTEXT_KEY: True}).write({"active": False})
+        return {
+            "user_id": user.id,
+            "login": user.login,
+            "email": user.email,
+            "archived": True,
+        }
 
     @api.model
     def should_block_oauth_auto_create(self, provider_id):

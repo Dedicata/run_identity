@@ -1,1 +1,1 @@
-from . import hooks, models
+from . import controllers, hooks, models

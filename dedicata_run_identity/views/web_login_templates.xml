@@ -5,19 +5,10 @@
         inherit_id="web.login"
         name="Dedicata Run Hide Password Login"
     >
-        <!--
-            Hide the entire password login form when SSO enforcement is active.
-            Targets the form by its action URL (stable across Odoo versions) and
-            uses inline style so no CSS class name assumptions are needed.
-            The `dedicata_local` param is an escape hatch for ops access.
-        -->
-        <xpath expr="//form[@action='/web/login']" position="attributes">
-            <attribute name="t-att-style">
-                "display:none" if (
-                    request.env['dedicata.run.identity'].sudo().should_hide_password_form()
-                    and not request.params.get('dedicata_local')
-                ) else None
-            </attribute>
+        <xpath expr="//form[@method='post']" position="attributes">
+            <attribute
+                name="t-att-style"
+            >"display:none" if (request.env['dedicata.run.identity'].sudo().should_hide_password_form() and not request.params.get('dedicata_local')) else None</attribute>
         </xpath>
     </template>
 </odoo>

@@ -2,15 +2,15 @@
 Unit tests for the Run API controller and related model changes.
 Runs without a live Odoo instance using stubs and mocks.
 """
+
 import importlib.util
-import io
 import json
 import os
+import pathlib
 import sys
 import types
 import unittest
 from unittest.mock import MagicMock, patch
-import pathlib
 
 _ADDON_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -18,6 +18,7 @@ _ADDON_ROOT = pathlib.Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 # Odoo stubs (same pattern as test_run_identity_invite.py)
 # ---------------------------------------------------------------------------
+
 
 def _make_odoo_stubs():
     odoo = types.ModuleType("odoo")
@@ -103,6 +104,7 @@ _Response = sys.modules["odoo.http"].Response
 # Load modules under test
 # ---------------------------------------------------------------------------
 
+
 def _load(rel_path):
     src = _ADDON_ROOT / rel_path
     spec = importlib.util.spec_from_file_location(str(rel_path).replace("/", "."), src)
@@ -126,6 +128,7 @@ ENV_API_SECRET = _ctrl_mod.ENV_API_SECRET
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_identity():
     obj = object.__new__(DedicataRunIdentity)
     obj.env = MagicMock()
@@ -148,8 +151,10 @@ def _make_request(method="POST", body=None, auth_header=None, path="/run-api/use
 # Model: _normalize_payload — username alias
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizePayloadUsername(unittest.TestCase):
     def setUp(self):
+        super().setUp()
         self.identity = _make_identity()
 
     def test_username_used_as_login(self):
@@ -160,7 +165,12 @@ class TestNormalizePayloadUsername(unittest.TestCase):
 
     def test_login_takes_precedence_over_username(self):
         values = self.identity._normalize_payload(
-            {"username": "joao", "login": "joao.silva", "email": "joao@example.com", "name": "João"}
+            {
+                "username": "joao",
+                "login": "joao.silva",
+                "email": "joao@example.com",
+                "name": "João",
+            }
         )
         self.assertEqual(values["login"], "joao.silva")
 
@@ -193,12 +203,14 @@ class TestNormalizePayloadUsername(unittest.TestCase):
 # Model: archive_user_by_login
 # ---------------------------------------------------------------------------
 
+
 class TestArchiveUserByLogin(unittest.TestCase):
     def _users_mock(self, found=None):
         identity = _make_identity()
         Users = MagicMock()
         Users.search.return_value = found
-        identity.env.__getitem__.return_value.sudo.return_value.with_context.return_value = Users
+        chain = identity.env.__getitem__.return_value.sudo.return_value
+        chain.with_context.return_value = Users
         return identity, Users
 
     def test_returns_none_when_not_found(self):
@@ -250,6 +262,7 @@ class TestArchiveUserByLogin(unittest.TestCase):
 # Controller: _authenticate
 # ---------------------------------------------------------------------------
 
+
 class TestAuthenticate(unittest.TestCase):
     def _req(self, auth_header=None):
         req = MagicMock()
@@ -292,6 +305,7 @@ class TestAuthenticate(unittest.TestCase):
 # Controller: POST /run-api/users
 # ---------------------------------------------------------------------------
 
+
 class TestUpsertEndpoint(unittest.TestCase):
     def _call(self, body, secret="mysecret", env_secret="mysecret"):
         ctrl = object.__new__(RunApiController)
@@ -327,7 +341,13 @@ class TestUpsertEndpoint(unittest.TestCase):
         self.assertIn("username", resp.data)
 
     def test_created_returns_201(self):
-        result = {"user_id": 5, "login": "joao.silva", "email": "a@b.com", "created": True, "updated": False}
+        result = {
+            "user_id": 5,
+            "login": "joao.silva",
+            "email": "a@b.com",
+            "created": True,
+            "updated": False,
+        }
         resp = self._call_with_identity(
             body={"username": "joao.silva", "email": "a@b.com", "name": "João"},
             identity_result=result,
@@ -336,7 +356,13 @@ class TestUpsertEndpoint(unittest.TestCase):
         self.assertIn("joao.silva", resp.data)
 
     def test_updated_returns_200(self):
-        result = {"user_id": 5, "login": "joao.silva", "email": "a@b.com", "created": False, "updated": True}
+        result = {
+            "user_id": 5,
+            "login": "joao.silva",
+            "email": "a@b.com",
+            "created": False,
+            "updated": True,
+        }
         resp = self._call_with_identity(
             body={"username": "joao.silva", "email": "a@b.com", "name": "João"},
             identity_result=result,
@@ -357,9 +383,14 @@ class TestUpsertEndpoint(unittest.TestCase):
 
     def test_user_error_returns_400(self):
         ctrl = object.__new__(RunApiController)
-        req = _make_request(body={"username": "u", "email": "u@b.com", "name": "U"}, auth_header="Bearer s")
+        req = _make_request(
+            body={"username": "u", "email": "u@b.com", "name": "U"},
+            auth_header="Bearer s",
+        )
         env_mock = MagicMock()
-        env_mock.__getitem__.return_value.upsert_user.side_effect = UserError("bad payload")
+        env_mock.__getitem__.return_value.upsert_user.side_effect = UserError(
+            "bad payload"
+        )
 
         with patch.dict(os.environ, {ENV_API_SECRET: "s"}):
             with patch.object(_ctrl_mod, "http") as mock_http:
@@ -375,12 +406,15 @@ class TestUpsertEndpoint(unittest.TestCase):
 # Controller: DELETE /run-api/users/<username>
 # ---------------------------------------------------------------------------
 
+
 class TestArchiveEndpoint(unittest.TestCase):
     def _call(self, username, identity_result, secret="s", env_secret="s"):
         ctrl = object.__new__(RunApiController)
         req = _make_request(method="DELETE", auth_header=f"Bearer {secret}")
         env_mock = MagicMock()
-        env_mock.__getitem__.return_value.archive_user_by_login.return_value = identity_result
+        env_mock.__getitem__.return_value.archive_user_by_login.return_value = (
+            identity_result
+        )
 
         with patch.dict(os.environ, {ENV_API_SECRET: env_secret}):
             with patch.object(_ctrl_mod, "http") as mock_http:
@@ -390,7 +424,12 @@ class TestArchiveEndpoint(unittest.TestCase):
                 return ctrl.archive_user(username)
 
     def test_found_returns_200(self):
-        result = {"user_id": 5, "login": "joao.silva", "email": "a@b.com", "archived": True}
+        result = {
+            "user_id": 5,
+            "login": "joao.silva",
+            "email": "a@b.com",
+            "archived": True,
+        }
         resp = self._call("joao.silva", identity_result=result)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("archived", resp.data)
@@ -401,7 +440,9 @@ class TestArchiveEndpoint(unittest.TestCase):
         self.assertIn("not found", resp.data)
 
     def test_wrong_token_returns_401(self):
-        resp = self._call("joao.silva", identity_result={}, secret="wrong", env_secret="correct")
+        resp = self._call(
+            "joao.silva", identity_result={}, secret="wrong", env_secret="correct"
+        )
         self.assertEqual(resp.status_code, 401)
 
     def test_empty_username_returns_400(self):

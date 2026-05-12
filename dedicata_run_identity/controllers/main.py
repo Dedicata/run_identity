@@ -6,7 +6,6 @@ import os
 from odoo import SUPERUSER_ID, http
 from odoo.exceptions import UserError
 
-
 _logger = logging.getLogger(__name__)
 
 ENV_API_SECRET = "DEDICATA_RUN_API_SECRET"
@@ -29,7 +28,7 @@ def _authenticate(request):
     if not auth_header.startswith("Bearer "):
         return _json_response({"error": "unauthorized"}, status=401)
 
-    token = auth_header[len("Bearer "):]
+    token = auth_header[len("Bearer ") :]
     if not hmac.compare_digest(token.encode(), secret.encode()):
         return _json_response({"error": "unauthorized"}, status=401)
 
@@ -37,7 +36,6 @@ def _authenticate(request):
 
 
 class RunApiController(http.Controller):
-
     @http.route(
         "/run-api/users",
         type="http",

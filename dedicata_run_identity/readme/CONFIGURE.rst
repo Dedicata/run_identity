@@ -1,6 +1,3 @@
-Configuration
-=============
-
 The module is configured through environment variables:
 
 * ``DEDICATA_RUN_IDENTITY_BLOCK_OAUTH_AUTO_CREATE``: defaults to ``true``.

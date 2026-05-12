@@ -2,6 +2,7 @@
 Inject Odoo stubs before pytest collects any addon modules.
 This allows standalone unit tests to run without a live Odoo installation.
 """
+
 import sys
 import types
 

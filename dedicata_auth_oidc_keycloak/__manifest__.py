@@ -1,6 +1,6 @@
 {
     "name": "Dedicata Keycloak OIDC Authentication",
-    "summary": "Configure the default Keycloak OIDC provider from environment variables",
+    "summary": "Configure the default Keycloak OIDC provider from env variables",
     "version": "19.0.1.0.0",
     "category": "Tools",
     "license": "AGPL-3",

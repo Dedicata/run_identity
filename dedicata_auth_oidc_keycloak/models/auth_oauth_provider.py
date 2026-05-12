@@ -1,4 +1,4 @@
-from odoo import _, models
+from odoo import models
 from odoo.exceptions import AccessError
 
 from ..hooks import (
@@ -30,9 +30,8 @@ class AuthOauthProvider(models.Model):
             and MANAGED_PROVIDER_FIELDS.intersection(vals)
             and self._is_dedicata_keycloak_provider()
         ):
-            raise AccessError(
-                _("The Dedicata Keycloak provider is managed by environment variables.")
-            )
+            msg = "The Dedicata Keycloak provider is managed by environment variables."
+            raise AccessError(self.env._(msg))
         return super().write(vals)
 
     def unlink(self):
@@ -41,7 +40,5 @@ class AuthOauthProvider(models.Model):
             and not self.env.context.get(SYNC_CONTEXT_KEY)
             and self._is_dedicata_keycloak_provider()
         ):
-            raise AccessError(
-                _("The Dedicata Keycloak provider is managed by environment variables.")
-            )
+            return True  # silently block deletion of the managed provider
         return super().unlink()

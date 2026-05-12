@@ -1,1 +1,2 @@
 from . import controllers, hooks, models
+from .hooks import post_init_hook  # noqa: F401

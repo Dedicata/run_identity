@@ -4,7 +4,6 @@ import os
 from odoo import api, models
 from odoo.exceptions import UserError
 
-
 _logger = logging.getLogger(__name__)
 
 PROVIDER_XMLID = "dedicata_auth_oidc_keycloak.provider_keycloak"
@@ -59,7 +58,7 @@ class DedicataRunIdentity(models.Model):
     def _keycloak_provider(self):
         provider = self.env.ref(PROVIDER_XMLID, raise_if_not_found=False)
         if not provider:
-            raise UserError("Dedicata Keycloak provider was not found.")
+            raise UserError(self.env._("Dedicata Keycloak provider was not found."))
         return provider.sudo()
 
     @api.model
@@ -80,7 +79,7 @@ class DedicataRunIdentity(models.Model):
             return "groups_id"
         if "group_ids" in Users._fields:
             return "group_ids"
-        raise UserError("Could not find the users groups field.")
+        raise UserError(self.env._("Could not find the users groups field."))
 
     @api.model
     def _normalize_payload(self, payload):
@@ -90,12 +89,12 @@ class DedicataRunIdentity(models.Model):
         name = (payload.get("name") or "").strip()
         login = (payload.get("login") or payload.get("username") or email).strip()
         missing = [
-            field
-            for field, value in (("email", email), ("name", name))
-            if not value
+            field for field, value in (("email", email), ("name", name)) if not value
         ]
         if missing:
-            raise UserError("Missing required identity fields: %s" % ", ".join(missing))
+            raise UserError(
+                self.env._("Missing required identity fields: %s", ", ".join(missing))
+            )
         values = {
             "name": name,
             "login": login,
@@ -109,7 +108,9 @@ class DedicataRunIdentity(models.Model):
                 values[optional_field] = payload[optional_field]
         local_login = payload.get("local_login_allowed")
         if local_login is not None:
-            values["dedicata_run_local_login_allowed"] = payload_bool(local_login, False)
+            values["dedicata_run_local_login_allowed"] = payload_bool(
+                local_login, False
+            )
         return values
 
     @api.model
@@ -150,9 +151,13 @@ class DedicataRunIdentity(models.Model):
         values["oauth_provider_id"] = provider.id
 
         user = self._find_user(provider, values)
-        Users = self.env["res.users"].sudo().with_context(
-            active_test=False,
-            **{RUN_SYNC_CONTEXT_KEY: True},
+        Users = (
+            self.env["res.users"]
+            .sudo()
+            .with_context(
+                active_test=False,
+                **{RUN_SYNC_CONTEXT_KEY: True},
+            )
         )
         if not user:
             create_values = dict(values)
@@ -163,9 +168,17 @@ class DedicataRunIdentity(models.Model):
             return self._serialize_user(user, created=True)
 
         if user.oauth_provider_id and user.oauth_provider_id != provider:
-            raise UserError("Existing user is already linked to another OAuth provider.")
-        if user.oauth_uid and values["oauth_uid"] and user.oauth_uid != values["oauth_uid"]:
-            raise UserError("Existing user is already linked to another OAuth subject.")
+            raise UserError(
+                self.env._("Existing user is already linked to another OAuth provider.")
+            )
+        if (
+            user.oauth_uid
+            and values["oauth_uid"]
+            and user.oauth_uid != values["oauth_uid"]
+        ):
+            raise UserError(
+                self.env._("Existing user is already linked to another OAuth subject.")
+            )
 
         write_values = dict(values)
         if not write_values.get("oauth_uid") and user.oauth_uid:
@@ -194,7 +207,9 @@ class DedicataRunIdentity(models.Model):
                 "created": False,
                 "updated": False,
             }
-        user.with_context(**{RUN_SYNC_CONTEXT_KEY: True}).sudo().write({"active": False})
+        user.with_context(**{RUN_SYNC_CONTEXT_KEY: True}).sudo().write(
+            {"active": False}
+        )
         return self._serialize_user(user, updated=True)
 
     @api.model

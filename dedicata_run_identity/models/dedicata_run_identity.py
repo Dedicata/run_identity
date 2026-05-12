@@ -14,6 +14,7 @@ ENV_HIDE_PASSWORD_FORM = "DEDICATA_RUN_IDENTITY_HIDE_PASSWORD_FORM"
 ENV_LOCAL_LOGIN_ALLOWLIST = "DEDICATA_RUN_IDENTITY_LOCAL_LOGIN_ALLOWLIST"
 ENV_DEFAULT_GROUP_XMLIDS = "DEDICATA_RUN_IDENTITY_DEFAULT_GROUP_XMLIDS"
 ENV_LOCK_USER_IDENTITY = "DEDICATA_RUN_IDENTITY_LOCK_USER_IDENTITY"
+ENV_PORTAL_PASSWORD_BYPASS = "DEDICATA_RUN_IDENTITY_PORTAL_PASSWORD_BYPASS"
 
 RUN_SYNC_CONTEXT_KEY = "dedicata_run_identity_sync"
 FALSE_VALUES = {"0", "false", "no", "off"}
@@ -280,6 +281,13 @@ class DedicataRunIdentity(models.Model):
             .search([("login", "=", login)], limit=1)
         )
         if user and user.dedicata_run_local_login_allowed:
+            return False
+        # 3. Portal users are not managed by the Run platform and have no
+        #    Keycloak account, so they must be allowed to use password login.
+        #    Controlled by DEDICATA_RUN_IDENTITY_PORTAL_PASSWORD_BYPASS (default: true).
+        if get_bool_env(ENV_PORTAL_PASSWORD_BYPASS, True) and user and user.has_group(
+            "base.group_portal"
+        ):
             return False
         return True
 

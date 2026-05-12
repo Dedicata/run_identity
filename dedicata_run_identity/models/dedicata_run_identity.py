@@ -285,8 +285,10 @@ class DedicataRunIdentity(models.Model):
         # 3. Portal users are not managed by the Run platform and have no
         #    Keycloak account, so they must be allowed to use password login.
         #    Controlled by DEDICATA_RUN_IDENTITY_PORTAL_PASSWORD_BYPASS (default: true).
-        if get_bool_env(ENV_PORTAL_PASSWORD_BYPASS, True) and user and user.has_group(
-            "base.group_portal"
+        if (
+            get_bool_env(ENV_PORTAL_PASSWORD_BYPASS, True)
+            and user
+            and user.has_group("base.group_portal")
         ):
             return False
         return True

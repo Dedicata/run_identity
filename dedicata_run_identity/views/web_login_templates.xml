@@ -18,7 +18,7 @@
 
         <!-- Hide email field when SSO is active (keep SSO buttons visible) -->
         <xpath
-            expr="//form[@method='post']//*[contains(@class,'field-login')]"
+            expr="//form[@method='post']//*[hasclass('field-login')]"
             position="attributes"
         >
             <attribute
@@ -28,7 +28,7 @@
 
         <!-- Hide password field when SSO is active -->
         <xpath
-            expr="//form[@method='post']//*[contains(@class,'o_caps_lock_warning')]"
+            expr="//form[@method='post']//*[hasclass('o_caps_lock_warning')]"
             position="attributes"
         >
             <attribute
@@ -48,7 +48,7 @@
 
         <!-- Add "Login with email and password" fallback link for portal users -->
         <xpath
-            expr="//form[@method='post']//div[contains(@class,'oe_login_buttons')]"
+            expr="//form[@method='post']//div[hasclass('oe_login_buttons')]"
             position="inside"
         >
             <t

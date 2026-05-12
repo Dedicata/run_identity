@@ -1,6 +1,5 @@
 import logging
 
-
 _logger = logging.getLogger(__name__)
 
 ADMIN_XMLID = "base.user_admin"
@@ -33,7 +32,8 @@ def post_init_hook(env):
 
     if admin_user.dedicata_run_local_login_allowed:
         _logger.debug(
-            "dedicata_run_identity: admin user already has local-login flag, nothing to do."
+            "dedicata_run_identity: admin user already has local-login flag, "
+            "nothing to do."
         )
         return
 

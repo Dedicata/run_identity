@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import fields, models
 from odoo.exceptions import AccessDenied, AccessError
 
 from .dedicata_run_identity import (
@@ -11,7 +11,6 @@ class ResUsers(models.Model):
     _inherit = "res.users"
 
     dedicata_run_managed = fields.Boolean(
-        string="Dedicata Run Managed",
         copy=False,
         readonly=True,
     )
@@ -54,15 +53,22 @@ class ResUsers(models.Model):
         credential = args[0]
         if isinstance(credential, dict):
             return credential.get("type") == "oauth_token"
-        return bool(self.sudo().oauth_access_token and credential == self.sudo().oauth_access_token)
+        return bool(
+            self.sudo().oauth_access_token
+            and credential == self.sudo().oauth_access_token
+        )
 
     def _check_credentials(self, *args, **kwargs):
         if not self._dedicata_is_oauth_token_credentials(args):
             login = self._dedicata_login_from_credentials(args)
             interactive = self._dedicata_is_interactive_credentials(args)
-            if self.env["dedicata.run.identity"].sudo().should_disable_password_login(
-                login,
-                interactive=interactive,
+            if (
+                self.env["dedicata.run.identity"]
+                .sudo()
+                .should_disable_password_login(
+                    login,
+                    interactive=interactive,
+                )
             ):
                 raise AccessDenied()
         return super()._check_credentials(*args, **kwargs)
@@ -75,5 +81,7 @@ class ResUsers(models.Model):
             and self.env["dedicata.run.identity"].sudo().is_user_identity_locked()
             and any(self.sudo().mapped("dedicata_run_managed"))
         ):
-            raise AccessError(_("Dedicata Run manages identity fields for this user."))
+            raise AccessError(
+                self.env._("Dedicata Run manages identity fields for this user.")
+            )
         return super().write(vals)

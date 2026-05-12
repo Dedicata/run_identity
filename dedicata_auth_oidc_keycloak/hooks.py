@@ -3,7 +3,6 @@ import os
 
 from odoo import api
 
-
 _logger = logging.getLogger(__name__)
 
 PROVIDER_XMLID = "dedicata_auth_oidc_keycloak.provider_keycloak"
@@ -56,7 +55,9 @@ def _provider_values(env):
     issuer_url = _clean_url(os.getenv(ENV_ISSUER_URL))
     client_id = (os.getenv(ENV_CLIENT_ID) or "").strip()
     has_required_config = bool(issuer_url and client_id)
-    enabled = _get_bool(os.getenv(ENV_ENABLED), has_required_config) and has_required_config
+    enabled = (
+        _get_bool(os.getenv(ENV_ENABLED), has_required_config) and has_required_config
+    )
 
     values = {
         "name": (os.getenv(ENV_PROVIDER_NAME) or "Keycloak").strip(),
@@ -87,13 +88,17 @@ def _provider_values(env):
 
 
 def _xmlid_record(env):
-    xmlid = env["ir.model.data"].sudo().search(
-        [
-            ("module", "=", "dedicata_auth_oidc_keycloak"),
-            ("name", "=", "provider_keycloak"),
-            ("model", "=", "auth.oauth.provider"),
-        ],
-        limit=1,
+    xmlid = (
+        env["ir.model.data"]
+        .sudo()
+        .search(
+            [
+                ("module", "=", "dedicata_auth_oidc_keycloak"),
+                ("name", "=", "provider_keycloak"),
+                ("model", "=", "auth.oauth.provider"),
+            ],
+            limit=1,
+        )
     )
     if not xmlid:
         return env["auth.oauth.provider"]
@@ -125,13 +130,17 @@ def sync_keycloak_provider(env):
     if provider:
         provider.with_context(**{SYNC_CONTEXT_KEY: True}).write(values)
     else:
-        provider = provider_model.with_context(**{SYNC_CONTEXT_KEY: True}).create(values)
+        provider = provider_model.with_context(**{SYNC_CONTEXT_KEY: True}).create(
+            values
+        )
     _ensure_xmlid(env, provider)
 
     if values["enabled"]:
         _logger.info("Keycloak OIDC provider synchronized from environment.")
     else:
-        _logger.info("Keycloak OIDC provider disabled: missing or disabled environment.")
+        _logger.info(
+            "Keycloak OIDC provider disabled: missing or disabled environment."
+        )
 
 
 def post_init_hook(env_or_cr, registry=None):

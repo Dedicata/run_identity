@@ -11,27 +11,49 @@
         visible when SSO is active.
         -->
         <xpath expr="//form[@method='post']" position="attributes">
-            <attribute name="t-attf-class">oe_login_form #{'' if (login or request.params.get('dedicata_local') or request.env['dedicata.run.identity'].sudo().should_hide_password_form()) else 'd-none'}</attribute>
+            <attribute
+                name="t-attf-class"
+            >oe_login_form #{'' if (login or request.params.get('dedicata_local') or request.env['dedicata.run.identity'].sudo().should_hide_password_form()) else 'd-none'}</attribute>
         </xpath>
 
         <!-- Hide email field when SSO is active (keep SSO buttons visible) -->
-        <xpath expr="//form[@method='post']//*[contains(@class,'field-login')]" position="attributes">
-            <attribute name="t-if">not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
+        <xpath
+            expr="//form[@method='post']//*[contains(@class,'field-login')]"
+            position="attributes"
+        >
+            <attribute
+                name="t-if"
+            >not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
         </xpath>
 
         <!-- Hide password field when SSO is active -->
-        <xpath expr="//form[@method='post']//*[contains(@class,'o_caps_lock_warning')]" position="attributes">
-            <attribute name="t-if">not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
+        <xpath
+            expr="//form[@method='post']//*[contains(@class,'o_caps_lock_warning')]"
+            position="attributes"
+        >
+            <attribute
+                name="t-if"
+            >not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
         </xpath>
 
         <!-- Hide Log in submit button when SSO is active -->
-        <xpath expr="//form[@method='post']//button[@type='submit']" position="attributes">
-            <attribute name="t-if">not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
+        <xpath
+            expr="//form[@method='post']//button[@type='submit']"
+            position="attributes"
+        >
+            <attribute
+                name="t-if"
+            >not request.env['dedicata.run.identity'].sudo().should_hide_password_form() or request.params.get('dedicata_local')</attribute>
         </xpath>
 
         <!-- Add "Login with email and password" fallback link for portal users -->
-        <xpath expr="//form[@method='post']//div[contains(@class,'oe_login_buttons')]" position="inside">
-            <t t-if="request.env['dedicata.run.identity'].sudo().should_hide_password_form() and not request.params.get('dedicata_local')">
+        <xpath
+            expr="//form[@method='post']//div[contains(@class,'oe_login_buttons')]"
+            position="inside"
+        >
+            <t
+                t-if="request.env['dedicata.run.identity'].sudo().should_hide_password_form() and not request.params.get('dedicata_local')"
+            >
                 <div class="text-center mt-3">
                     <a href="?dedicata_local=1" class="btn btn-link btn-sm text-muted">
                         <small>Login with email and password</small>

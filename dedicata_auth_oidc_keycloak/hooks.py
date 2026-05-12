@@ -80,9 +80,9 @@ def _provider_values(env):
             }
         )
         if "end_session_endpoint" in env["auth.oauth.provider"]._fields:
-            values["end_session_endpoint"] = (
-                f"{issuer_url}/protocol/openid-connect/logout"
-            )
+            values[
+                "end_session_endpoint"
+            ] = f"{issuer_url}/protocol/openid-connect/logout"
 
     return values
 

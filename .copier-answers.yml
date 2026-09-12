@@ -1,5 +1,5 @@
 # Do NOT update manually; changes here will be overwritten by Copier
-_commit: b8a7a60
+_commit: fd8dbb0
 _src_path: https://github.com/itbrasil-odoo/itbrasil-addons-repo-template.git
 additional_ruff_rules: []
 banner_url: https://github.com/itbrasil-odoo/.github/raw/main/readme-banner-image.png

@@ -1,9 +1,8 @@
 # Do NOT update manually; changes here will be overwritten by Copier
-_commit: 1bb1d07
+_commit: b8a7a60
 _src_path: https://github.com/itbrasil-odoo/itbrasil-addons-repo-template.git
 additional_ruff_rules: []
 banner_url: https://github.com/itbrasil-odoo/.github/raw/main/readme-banner-image.png
-ci: GitHub
 enable_checklog_odoo: true
 generate_requirements_txt: true
 github_check_license: true
@@ -17,6 +16,7 @@ odoo_test_flavor: Both
 odoo_version: 18.0
 org_name: Dedicata
 org_slug: dedicata
+postgres_image: ''
 rebel_module_groups: []
 repo_description: Addons para o Run
 repo_name: Addons para o Run da Wevy

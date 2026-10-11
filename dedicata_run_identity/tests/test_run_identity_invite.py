@@ -86,6 +86,7 @@ def _make_identity():
 
 class TestNormalizePayload(unittest.TestCase):
     def setUp(self):
+        super().setUp()
         self.identity = _make_identity()
 
     def test_full_payload(self):
